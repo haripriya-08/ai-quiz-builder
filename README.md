@@ -2,6 +2,10 @@
 
 > An AI-powered quiz generation platform that turns topics and PDF documents into interactive quizzes.
 
+## 🚀 Live Demo
+
+👉 **[Try AI Quiz Builder](https://ai-quiz-builder-steel-nine.vercel.app/)**
+
 AI Quiz Builder is a full-stack AI-powered EdTech application that allows users to **generate quizzes using AI, upload PDFs to create quizzes automatically, share quizzes using unique codes, attempt quizzes, and track their performance**.
 
 The project was built to understand and implement a complete real-world application flow — from **frontend → backend APIs → AI integration → database → authentication → deployment**.
