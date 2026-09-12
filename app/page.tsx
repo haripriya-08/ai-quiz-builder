@@ -1,10 +1,10 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type GeneratedQuiz = {
+  id?: string;
   code?: string;
   topic?: string;
   difficulty?: string;
@@ -17,7 +17,7 @@ export default function Home() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("Easy");
-  const [questionCount, setQuestionCount] = useState("5");
+  const [questionCount, setQuestionCount] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -53,24 +53,40 @@ export default function Home() {
   // GENERATE QUIZ
   // =========================
   const generateQuiz = async () => {
-    // PDF quiz
+    if (questionCount < 1 || questionCount > 50) {
+      alert("Please choose between 1 and 50 questions.");
+      return;
+    }
+
+    // =========================
+    // PDF QUIZ
+    // =========================
     if (pdfFile) {
       try {
         setIsGenerating(true);
 
         const formData = new FormData();
-        formData.append("file", pdfFile);
 
-        const response = await fetch("/api/generate-pdf-quiz", {
-          method: "POST",
-          body: formData,
-        });
+        formData.append("file", pdfFile);
+        formData.append(
+          "questionCount",
+          questionCount.toString()
+        );
+
+        const response = await fetch(
+          "/api/generate-pdf-quiz",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
 
         const data = await response.json();
 
         if (!response.ok || !data.quiz) {
           alert(
-            data.error || "Failed to generate quiz from PDF."
+            data.error ||
+              "Failed to generate quiz from PDF."
           );
           return;
         }
@@ -93,7 +109,9 @@ export default function Home() {
       return;
     }
 
-    // Normal topic-based quiz
+    // =========================
+    // NORMAL TOPIC QUIZ
+    // =========================
     if (!topic.trim()) {
       alert("Please enter a topic or upload a PDF.");
       return;
@@ -102,17 +120,20 @@ export default function Home() {
     try {
       setIsGenerating(true);
 
-      const response = await fetch("/api/generate-quiz", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          topic,
-          difficulty,
-          questionCount,
-        }),
-      });
+      const response = await fetch(
+        "/api/generate-quiz",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            topic,
+            difficulty,
+            questionCount,
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -177,7 +198,10 @@ export default function Home() {
         setCopied(false);
       }, 2000);
     } catch (error) {
-      console.error("Failed to copy quiz code:", error);
+      console.error(
+        "Failed to copy quiz code:",
+        error
+      );
     }
   };
 
@@ -193,15 +217,18 @@ export default function Home() {
     }
 
     try {
-      const response = await fetch("/api/join-quiz", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code,
-        }),
-      });
+      const response = await fetch(
+        "/api/join-quiz",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            code,
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -221,7 +248,9 @@ export default function Home() {
       window.location.href = "/quiz";
     } catch (error) {
       console.error("Join Quiz Error:", error);
-      alert("Unable to join quiz. Please try again.");
+      alert(
+        "Unable to join quiz. Please try again."
+      );
     }
   };
 
@@ -234,7 +263,9 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <button
             type="button"
-            onClick={() => (window.location.href = "/")}
+            onClick={() =>
+              (window.location.href = "/")
+            }
             className="flex items-center gap-3"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e83e8c] font-bold text-white">
@@ -250,7 +281,8 @@ export default function Home() {
             <button
               type="button"
               onClick={() =>
-                (window.location.href = "/dashboard")
+                (window.location.href =
+                  "/dashboard")
               }
               className="transition hover:text-black"
             >
@@ -260,7 +292,8 @@ export default function Home() {
             <button
               type="button"
               onClick={() =>
-                (window.location.href = "/history")
+                (window.location.href =
+                  "/history")
               }
               className="transition hover:text-black"
             >
@@ -270,7 +303,8 @@ export default function Home() {
             <button
               type="button"
               onClick={() =>
-                (window.location.href = "/profile")
+                (window.location.href =
+                  "/profile")
               }
               className="transition hover:text-black"
             >
@@ -283,7 +317,8 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() =>
-                  (window.location.href = "/profile")
+                  (window.location.href =
+                    "/profile")
                 }
                 className="hidden text-sm font-medium text-gray-600 transition hover:text-black sm:block"
               >
@@ -332,9 +367,9 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-gray-600">
-            Generate personalized quizzes on any topic,
-            test your knowledge, and discover what you need
-            to improve.
+            Generate personalized quizzes on any
+            topic, test your knowledge, and discover
+            what you need to improve.
           </p>
         </div>
 
@@ -349,8 +384,8 @@ export default function Home() {
               </h2>
 
               <p className="mt-2 text-sm text-gray-500">
-                Customize your quiz and let AI generate the
-                questions.
+                Customize your quiz and let AI
+                generate the questions.
               </p>
             </div>
 
@@ -364,7 +399,9 @@ export default function Home() {
                 type="text"
                 placeholder="e.g. Java, DSA, React, Machine Learning"
                 value={topic}
-                onChange={(e) => setTopic(e.target.value)}
+                onChange={(e) =>
+                  setTopic(e.target.value)
+                }
                 className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 outline-none transition focus:border-[#e83e8c] focus:ring-2 focus:ring-pink-100"
               />
 
@@ -379,7 +416,9 @@ export default function Home() {
                   <button
                     key={suggestion}
                     type="button"
-                    onClick={() => setTopic(suggestion)}
+                    onClick={() =>
+                      setTopic(suggestion)
+                    }
                     className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-pink-300 hover:bg-pink-50 hover:text-pink-600"
                   >
                     {suggestion}
@@ -390,6 +429,7 @@ export default function Home() {
 
             {/* DIFFICULTY + QUESTIONS */}
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
+              {/* DIFFICULTY */}
               <div>
                 <label className="mb-2 block text-sm font-semibold">
                   Difficulty
@@ -408,23 +448,38 @@ export default function Home() {
                 </select>
               </div>
 
+              {/* QUESTION COUNT */}
               <div>
                 <label className="mb-2 block text-sm font-semibold">
                   Number of Questions
                 </label>
 
-                <select
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
                   value={questionCount}
-                  onChange={(e) =>
-                    setQuestionCount(e.target.value)
-                  }
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 outline-none transition focus:border-[#e83e8c]"
-                >
-                  <option>5</option>
-                  <option>10</option>
-                  <option>15</option>
-                  <option>20</option>
-                </select>
+                  onChange={(e) => {
+                    const value = Number(
+                      e.target.value
+                    );
+
+                    if (
+                      Number.isNaN(value)
+                    ) {
+                      return;
+                    }
+
+                    if (value >= 1 && value <= 50) {
+                      setQuestionCount(value);
+                    }
+                  }}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 outline-none transition focus:border-[#e83e8c] focus:ring-2 focus:ring-pink-100"
+                />
+
+                <p className="mt-2 text-xs text-gray-500">
+                  Choose any number from 1 to 50.
+                </p>
               </div>
             </div>
 
@@ -447,12 +502,18 @@ export default function Home() {
                   id="pdf-upload"
                   className="hidden"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
+                    const file =
+                      e.target.files?.[0];
 
                     if (!file) return;
 
-                    if (file.type !== "application/pdf") {
-                      alert("Please select a PDF file.");
+                    if (
+                      file.type !==
+                      "application/pdf"
+                    ) {
+                      alert(
+                        "Please select a PDF file."
+                      );
                       return;
                     }
 
@@ -511,8 +572,8 @@ export default function Home() {
                     </h3>
 
                     <p className="mt-1 text-sm text-gray-600">
-                      Share this code with others so they can
-                      join your quiz.
+                      Share this code with others so
+                      they can join your quiz.
                     </p>
                   </div>
 
@@ -537,7 +598,9 @@ export default function Home() {
                         onClick={copyQuizCode}
                         className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold transition hover:border-pink-300 hover:bg-pink-50"
                       >
-                        {copied ? "Copied!" : "Copy Code"}
+                        {copied
+                          ? "Copied!"
+                          : "Copy Code"}
                       </button>
                     </div>
                   </div>
@@ -571,7 +634,8 @@ export default function Home() {
               </h3>
 
               <p className="mt-1 text-sm text-gray-500">
-                Enter a code to join someone else's quiz.
+                Enter a code to join someone else's
+                quiz.
               </p>
 
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -580,7 +644,9 @@ export default function Home() {
                   placeholder="e.g. JAVA-7K29X"
                   value={joinCode}
                   onChange={(e) =>
-                    setJoinCode(e.target.value.toUpperCase())
+                    setJoinCode(
+                      e.target.value.toUpperCase()
+                    )
                   }
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -609,20 +675,24 @@ export default function Home() {
       <section className="border-t border-gray-200 bg-white">
         <div className="mx-auto grid max-w-7xl gap-8 px-6 py-16 md:grid-cols-3">
           <div>
-            <div className="mb-4 text-2xl">✦</div>
+            <div className="mb-4 text-2xl">
+              ✦
+            </div>
 
             <h3 className="font-bold">
               AI Generated
             </h3>
 
             <p className="mt-2 text-sm leading-6 text-gray-500">
-              Generate questions instantly based on your
-              chosen topic and difficulty.
+              Generate questions instantly based on
+              your chosen topic and difficulty.
             </p>
           </div>
 
           <div>
-            <div className="mb-4 text-2xl">◉</div>
+            <div className="mb-4 text-2xl">
+              ◉
+            </div>
 
             <h3 className="font-bold">
               Track Progress
@@ -635,15 +705,17 @@ export default function Home() {
           </div>
 
           <div>
-            <div className="mb-4 text-2xl">↗</div>
+            <div className="mb-4 text-2xl">
+              ↗
+            </div>
 
             <h3 className="font-bold">
               Learn Smarter
             </h3>
 
             <p className="mt-2 text-sm leading-6 text-gray-500">
-              Use AI-powered insights to focus your practice
-              where it matters most.
+              Use AI-powered insights to focus your
+              practice where it matters most.
             </p>
           </div>
         </div>

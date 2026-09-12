@@ -10,78 +10,92 @@ export default function QuizPage() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [submitted, setSubmitted] = useState(false);
 
-  const submitQuiz = async() => {
+  const submitQuiz = async () => {
     if (!quiz) return;
     if (submitted) return;
-  
+
     setSubmitted(true);
-  
+
     let calculatedScore = 0;
-  
+
     quiz.questions.forEach((q: any, index: number) => {
       if (selectedAnswers[index] === q.answer) {
         calculatedScore++;
       }
     });
-  try {
-  const response = await fetch("/api/submit-quiz", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      quizId: quiz.id,
-      selectedAnswers: selectedAnswers,
-      score: calculatedScore,
-      totalQuestions: quiz.questions.length,
-    }),
-  });
 
-  const data = await response.json();
+    setScore(calculatedScore);
 
-  if (!response.ok) {
-    console.error("Attempt save failed:", data);
-  } else {
-    console.log("Attempt saved:", data);
-  }
-} catch (error) {
-  console.error("Attempt save error:", error);
-}
+    try {
+      const response = await fetch("/api/submit-quiz", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          quizId: quiz.id,
+          selectedAnswers: selectedAnswers,
+          score: calculatedScore,
+          totalQuestions: quiz.questions.length,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Attempt save failed:", data);
+      } else {
+        console.log("Attempt saved:", data);
+      }
+    } catch (error) {
+      console.error("Attempt save error:", error);
+    }
+
     const newResult = {
       quiz: quiz,
       selectedAnswers: selectedAnswers,
       score: calculatedScore,
       date: new Date().toISOString(),
     };
-    
-  
-    // Save latest result
+
     localStorage.setItem(
       "quizResult",
       JSON.stringify(newResult)
     );
-  
-    // Get previous history
+
     const savedHistory = localStorage.getItem("quizHistory");
-  
+
     const history = savedHistory
       ? JSON.parse(savedHistory)
       : [];
-  
-    // Add newest attempt
+
     history.unshift(newResult);
-  
-    // Save complete history
+
     localStorage.setItem(
       "quizHistory",
       JSON.stringify(history)
     );
-  
+
     window.location.href = "/results";
   };
 
+  /*
+   * Timer
+   *
+   * Each question gets its own 60 seconds.
+   * When the question changes, another useEffect below
+   * resets the timer back to 60.
+   */
   useEffect(() => {
+    if (submitted) return;
+
     if (timeLeft <= 0) {
+      if (currentQuestion < quiz?.questions?.length - 1) {
+        setCurrentQuestion((prev: number) => prev + 1);
+      } else {
+        submitQuiz();
+      }
+
       return;
     }
 
@@ -90,22 +104,28 @@ export default function QuizPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [timeLeft, currentQuestion, submitted]);
 
+  /*
+   * Reset timer whenever the current question changes.
+   */
   useEffect(() => {
-    if (timeLeft === 0) {
-      submitQuiz();
+    if (!submitted) {
+      setTimeLeft(60);
     }
-  }, [timeLeft]);
+  }, [currentQuestion, submitted]);
 
+  /*
+   * Load quiz from localStorage.
+   */
   useEffect(() => {
     const savedQuiz = localStorage.getItem("quiz");
-  
+
     if (!savedQuiz || savedQuiz === "undefined") {
       window.location.href = "/";
       return;
     }
-  
+
     try {
       setQuiz(JSON.parse(savedQuiz));
     } catch (error) {
@@ -120,15 +140,20 @@ export default function QuizPage() {
       <main className="min-h-screen bg-[#fafafa] flex items-center justify-center text-gray-900">
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-[#e83e8c]" />
-          <h1 className="text-xl font-semibold">Loading Quiz...</h1>
+          <h1 className="text-xl font-semibold">
+            Loading Quiz...
+          </h1>
         </div>
       </main>
     );
   }
 
   const totalQuestions = quiz.questions.length;
-  const progress = ((currentQuestion + 1) / totalQuestions) * 100;
-  const answeredCount = Object.keys(selectedAnswers).length;
+  const progress =
+    ((currentQuestion + 1) / totalQuestions) * 100;
+
+  const answeredCount =
+    Object.keys(selectedAnswers).length;
 
   return (
     <main className="min-h-screen bg-[#fafafa] text-[#171717]">
@@ -142,13 +167,18 @@ export default function QuizPage() {
             onClick={() => (window.location.href = "/")}
             className="text-xl font-bold tracking-tight"
           >
-            Quiz<span className="text-[#e83e8c]">Builder</span>
+            Quiz<span className="text-[#e83e8c]">
+              Builder
+            </span>
           </button>
 
           <div className="flex items-center gap-6 text-sm font-medium text-gray-600">
+
             <button
               type="button"
-              onClick={() => (window.location.href = "/dashboard")}
+              onClick={() =>
+                (window.location.href = "/dashboard")
+              }
               className="transition hover:text-[#e83e8c]"
             >
               Dashboard
@@ -156,7 +186,9 @@ export default function QuizPage() {
 
             <button
               type="button"
-              onClick={() => (window.location.href = "/history")}
+              onClick={() =>
+                (window.location.href = "/history")
+              }
               className="transition hover:text-[#e83e8c]"
             >
               History
@@ -164,11 +196,14 @@ export default function QuizPage() {
 
             <button
               type="button"
-              onClick={() => (window.location.href = "/profile")}
+              onClick={() =>
+                (window.location.href = "/profile")
+              }
               className="transition hover:text-[#e83e8c]"
             >
               Profile
             </button>
+
           </div>
 
         </div>
@@ -181,7 +216,9 @@ export default function QuizPage() {
         <div className="mb-8">
 
           <div className="mb-3 flex items-center justify-between">
+
             <div>
+
               <p className="text-sm font-medium text-[#e83e8c]">
                 AI Generated Quiz
               </p>
@@ -189,17 +226,21 @@ export default function QuizPage() {
               <h1 className="mt-1 text-3xl font-bold tracking-tight">
                 Test Your Knowledge
               </h1>
-              {quiz.code && (
-  <div className="mt-4 inline-flex items-center gap-3 rounded-xl border border-pink-200 bg-pink-50 px-4 py-2">
-    <span className="text-sm font-medium text-gray-600">
-      Quiz Code
-    </span>
 
-    <span className="font-bold tracking-wider text-[#e83e8c]">
-      {quiz.code}
-    </span>
-  </div>
-)}
+              {quiz.code && (
+                <div className="mt-4 inline-flex items-center gap-3 rounded-xl border border-pink-200 bg-pink-50 px-4 py-2">
+
+                  <span className="text-sm font-medium text-gray-600">
+                    Quiz Code
+                  </span>
+
+                  <span className="font-bold tracking-wider text-[#e83e8c]">
+                    {quiz.code}
+                  </span>
+
+                </div>
+              )}
+
             </div>
 
             {/* Timer */}
@@ -212,29 +253,36 @@ export default function QuizPage() {
             >
               {timeLeft}s remaining
             </div>
+
           </div>
 
           <div className="mt-6">
 
             <div className="mb-2 flex items-center justify-between text-sm text-gray-500">
+
               <span>
-                Question {currentQuestion + 1} of {totalQuestions}
+                Question {currentQuestion + 1} of{" "}
+                {totalQuestions}
               </span>
 
               <span>
                 {answeredCount} / {totalQuestions} answered
               </span>
+
             </div>
 
             {/* Progress Bar */}
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+
               <div
                 className="h-full rounded-full bg-[#e83e8c] transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
+
             </div>
 
           </div>
+
         </div>
 
         {/* Question Navigation */}
@@ -246,33 +294,38 @@ export default function QuizPage() {
 
           <div className="flex flex-wrap gap-2">
 
-            {quiz.questions.map((_: any, index: number) => {
+            {quiz.questions.map(
+              (_: any, index: number) => {
 
-              const isAnswered =
-                selectedAnswers[index] !== undefined;
+                const isAnswered =
+                  selectedAnswers[index] !== undefined;
 
-              const isCurrent =
-                currentQuestion === index;
+                const isCurrent =
+                  currentQuestion === index;
 
-              return (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => setCurrentQuestion(index)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold transition ${
-                    isCurrent
-                      ? "bg-[#e83e8c] text-white shadow-md shadow-pink-200"
-                      : isAnswered
-                      ? "border border-pink-200 bg-pink-50 text-[#e83e8c]"
-                      : "border border-gray-200 bg-white text-gray-600 hover:border-pink-300 hover:text-[#e83e8c]"
-                  }`}
-                >
-                  {index + 1}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() =>
+                      setCurrentQuestion(index)
+                    }
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold transition ${
+                      isCurrent
+                        ? "bg-[#e83e8c] text-white shadow-md shadow-pink-200"
+                        : isAnswered
+                        ? "border border-pink-200 bg-pink-50 text-[#e83e8c]"
+                        : "border border-gray-200 bg-white text-gray-600 hover:border-pink-300 hover:text-[#e83e8c]"
+                    }`}
+                  >
+                    {index + 1}
+                  </button>
+                );
+              }
+            )}
 
           </div>
+
         </div>
 
         {/* Question Card */}
@@ -294,10 +347,14 @@ export default function QuizPage() {
           <div className="space-y-3">
 
             {quiz.questions[currentQuestion].options.map(
-              (option: string, optionIndex: number) => {
+              (
+                option: string,
+                optionIndex: number
+              ) => {
 
                 const isSelected =
-                  selectedAnswers[currentQuestion] === option;
+                  selectedAnswers[currentQuestion] ===
+                  option;
 
                 return (
                   <button
@@ -323,7 +380,9 @@ export default function QuizPage() {
                           : "bg-gray-100 text-gray-600 group-hover:bg-pink-100 group-hover:text-[#e83e8c]"
                       }`}
                     >
-                      {String.fromCharCode(65 + optionIndex)}
+                      {String.fromCharCode(
+                        65 + optionIndex
+                      )}
                     </span>
 
                     <span
@@ -349,7 +408,9 @@ export default function QuizPage() {
             <button
               type="button"
               onClick={() =>
-                setCurrentQuestion(currentQuestion - 1)
+                setCurrentQuestion(
+                  currentQuestion - 1
+                )
               }
               disabled={currentQuestion === 0}
               className={`rounded-xl px-5 py-3 text-sm font-semibold transition ${
@@ -365,8 +426,13 @@ export default function QuizPage() {
               type="button"
               onClick={() => {
 
-                if (currentQuestion < totalQuestions - 1) {
-                  setCurrentQuestion(currentQuestion + 1);
+                if (
+                  currentQuestion <
+                  totalQuestions - 1
+                ) {
+                  setCurrentQuestion(
+                    currentQuestion + 1
+                  );
                 } else {
                   submitQuiz();
                 }

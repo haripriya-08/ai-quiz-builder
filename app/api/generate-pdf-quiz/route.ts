@@ -3,13 +3,17 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/supabase";
 import { extractText, getDocumentProxy } from "unpdf";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const genAI = new GoogleGenerativeAI(
+  process.env.GEMINI_API_KEY!
+);
 
 export async function POST(request: Request) {
   try {
-    // 1. Get uploaded PDF
+    // 1. Get uploaded PDF and question count
     const formData = await request.formData();
+
     const file = formData.get("file");
+    const questionCountValue = formData.get("questionCount");
 
     if (!(file instanceof File)) {
       return NextResponse.json(
@@ -21,6 +25,21 @@ export async function POST(request: Request) {
     if (file.type !== "application/pdf") {
       return NextResponse.json(
         { error: "Only PDF files are supported." },
+        { status: 400 }
+      );
+    }
+
+    // Convert question count to number
+    const questionCount = Number(questionCountValue);
+
+    // Validate question count
+    if (
+      !Number.isInteger(questionCount) ||
+      questionCount < 1 ||
+      questionCount > 20
+    ) {
+      return NextResponse.json(
+        { error: "Invalid question count." },
         { status: 400 }
       );
     }
@@ -41,15 +60,21 @@ export async function POST(request: Request) {
 
     if (!extractedText) {
       return NextResponse.json(
-        { error: "Could not extract text from this PDF." },
+        {
+          error:
+            "Could not extract text from this PDF.",
+        },
         { status: 400 }
       );
     }
 
-    console.log("PDF text extracted successfully.");
+    console.log(
+      "PDF text extracted successfully."
+    );
 
     // Limit text sent to Gemini
-    const limitedText = extractedText.slice(0, 20000);
+    const limitedText =
+      extractedText.slice(0, 20000);
 
     // 5. Send extracted text to Gemini
     const model = genAI.getGenerativeModel({
@@ -59,7 +84,7 @@ export async function POST(request: Request) {
     const prompt = `
 Create a multiple-choice quiz based ONLY on the following PDF content.
 
-Generate 10 questions.
+Generate exactly ${questionCount} questions.
 
 Return ONLY valid JSON in exactly this format:
 
@@ -67,13 +92,20 @@ Return ONLY valid JSON in exactly this format:
   "questions": [
     {
       "question": "Question text",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
       "answer": "Option A"
     }
   ]
 }
 
 Rules:
+
+- Generate exactly ${questionCount} questions.
 - Use only information contained in the PDF.
 - Each question must have exactly 4 options.
 - There must be exactly one correct answer.
@@ -88,7 +120,8 @@ ${limitedText}
 `;
 
     // 6. Generate quiz
-    const aiResult = await model.generateContent(prompt);
+    const aiResult =
+      await model.generateContent(prompt);
 
     let text = aiResult.response.text().trim();
 
@@ -108,7 +141,23 @@ ${limitedText}
       quiz.questions.length === 0
     ) {
       return NextResponse.json(
-        { error: "AI could not generate valid quiz questions." },
+        {
+          error:
+            "AI could not generate valid quiz questions.",
+        },
+        { status: 500 }
+      );
+    }
+
+    // Ensure the generated count matches requested count
+    if (
+      quiz.questions.length !== questionCount
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `AI generated ${quiz.questions.length} questions instead of ${questionCount}. Please try again.`,
+        },
         { status: 500 }
       );
     }
@@ -116,23 +165,34 @@ ${limitedText}
     // 8. Generate quiz code
     const code =
       "PDF-" +
-      Math.random().toString(36).substring(2, 7).toUpperCase();
+      Math.random()
+        .toString(36)
+        .substring(2, 7)
+        .toUpperCase();
 
     // 9. Save quiz to Supabase
-    const { data: savedQuiz, error: databaseError } = await supabase
-      .from("quizzes")
-      .insert({
-        code,
-        topic: file.name.replace(/\.pdf$/i, ""),
-        difficulty: "PDF Generated",
-        question_count: quiz.questions.length,
-        questions: quiz.questions,
-      })
-      .select()
-      .single();
+    const { data: savedQuiz, error: databaseError } =
+      await supabase
+        .from("quizzes")
+        .insert({
+          code,
+          topic: file.name.replace(
+            /\.pdf$/i,
+            ""
+          ),
+          difficulty: "PDF Generated",
+          question_count:
+            quiz.questions.length,
+          questions: quiz.questions,
+        })
+        .select()
+        .single();
 
     if (databaseError) {
-      console.error("Supabase Error:", databaseError);
+      console.error(
+        "Supabase Error:",
+        databaseError
+      );
 
       return NextResponse.json(
         {
@@ -154,12 +214,16 @@ ${limitedText}
       },
     });
   } catch (error: any) {
-    console.error("PDF Quiz Error:", error);
+    console.error(
+      "PDF Quiz Error:",
+      error
+    );
 
     return NextResponse.json(
       {
         error:
-          error?.message || "Failed to generate quiz from PDF.",
+          error?.message ||
+          "Failed to generate quiz from PDF.",
       },
       { status: 500 }
     );
