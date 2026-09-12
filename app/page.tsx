@@ -17,7 +17,7 @@ export default function Home() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("Easy");
-  const [questionCount, setQuestionCount] = useState(5);
+  const [questionCount, setQuestionCount] = useState("5");
   const [isGenerating, setIsGenerating] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -53,10 +53,17 @@ export default function Home() {
   // GENERATE QUIZ
   // =========================
   const generateQuiz = async () => {
-    if (questionCount < 1 || questionCount > 50) {
-      alert("Please choose between 1 and 50 questions.");
-      return;
-    }
+  const count = Number(questionCount);
+
+  if (
+    questionCount.trim() === "" ||
+    !Number.isInteger(count) ||
+    count < 1 ||
+    count > 50
+  ) {
+    alert("Please choose between 1 and 50 questions.");
+    return;
+  }
 
     // =========================
     // PDF QUIZ
@@ -69,9 +76,9 @@ export default function Home() {
 
         formData.append("file", pdfFile);
         formData.append(
-          "questionCount",
-          questionCount.toString()
-        );
+  "questionCount",
+  count.toString()
+);
 
         const response = await fetch(
           "/api/generate-pdf-quiz",
@@ -128,10 +135,10 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            topic,
-            difficulty,
-            questionCount,
-          }),
+  topic,
+  difficulty,
+  questionCount: count,
+}),
         }
       );
 
@@ -455,27 +462,25 @@ export default function Home() {
                 </label>
 
                 <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={questionCount}
-                  onChange={(e) => {
-                    const value = Number(
-                      e.target.value
-                    );
+  type="number"
+  inputMode="numeric"
+  min={1}
+  max={50}
+  value={questionCount}
+  onChange={(e) => {
+    const value = e.target.value;
 
-                    if (
-                      Number.isNaN(value)
-                    ) {
-                      return;
-                    }
+    if (value === "") {
+      setQuestionCount("");
+      return;
+    }
 
-                    if (value >= 1 && value <= 50) {
-                      setQuestionCount(value);
-                    }
-                  }}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 outline-none transition focus:border-[#e83e8c] focus:ring-2 focus:ring-pink-100"
-                />
+    if (/^\d{0,2}$/.test(value)) {
+      setQuestionCount(value);
+    }
+  }}
+  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 outline-none transition focus:border-[#e83e8c] focus:ring-2 focus:ring-pink-100"
+/>
 
                 <p className="mt-2 text-xs text-gray-500">
                   Choose any number from 1 to 50.
